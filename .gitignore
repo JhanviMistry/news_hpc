@@ -1,0 +1,60 @@
+# -------------------------
+# Python ignores
+# -------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+develop-eggs/
+.installed.cfg
+*.manifest
+*.spec
+
+# -------------------------
+# Virtual environments
+# -------------------------
+venv/
+ENV/
+env/
+.venv/
+env.bak/
+
+# -------------------------
+# Jupyter notebooks
+# -------------------------
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# -------------------------
+# VSCode / PyCharm
+# -------------------------
+.vscode/
+.idea/
+*.iml
+
+# -------------------------
+# OS files
+# -------------------------
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# Logs & misc
+# -------------------------
+*.log
+*.pot
+*.mo
+*.sqlite3
+*.db
+
+# -------------------------
+# Environment variables
+# -------------------------
+.env
+.env.*

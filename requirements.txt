@@ -1,0 +1,12 @@
+fastapi[all]
+uvicorn
+kafka-python
+redis
+requests
+beautifulsoup4
+transformers
+torch
+spacy
+pydantic
+python-socketio
+lxml
