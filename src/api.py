@@ -4,8 +4,8 @@ import redis
 from fastapi import FastAPI
 from typing import List
 
-from src.database.connection import SessionLocal
-from src.database.models import Signal
+from database.connection import SessionLocal
+from database.models import Signal
 
 app = FastAPI()
 r = redis.Redis(host="localhost", port=6379, db=0)
