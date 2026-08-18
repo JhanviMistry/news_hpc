@@ -1,9 +1,13 @@
 # consumer.py
 import json
 import time
+
 from kafka import KafkaConsumer
 import redis
+
 from model_utils import extract_entities, analyze_sentiment
+from src.database.connection import SessionLocal
+from src.database.models import Signal
 
 KAFKA_BOOTSTRAP = "localhost:9093"
 TOPIC = "news.raw.en"
@@ -14,6 +18,7 @@ consumer = KafkaConsumer(TOPIC, bootstrap_servers=KAFKA_BOOTSTRAP,
                          auto_offset_reset='earliest', enable_auto_commit=True)
 
 r = redis.Redis.from_url(REDIS_URL)
+db = SessionLocal()
 
 def market_relevance(item):
     # simple heuristic: presence of company names/entities increases relevance
@@ -48,9 +53,46 @@ for msg in consumer:
                  "entities": entities, "sentiment": sent, "relevance": rel, "source": item.get("source")}
     signal = generate_signal(processed)
     # store top signals in Redis sorted set by absolute impact
+    '''
     key = "signals:hot"
     r.zadd(key, {json.dumps(signal): abs(signal["impact"])})
     # trim to top 200
     r.zremrangebyrank(key, 0, -201)
     print("Stored signal:", signal)
+    '''
 
+    # -------------------------
+    # Redis: hot leaderboard
+    # -------------------------
+    key = "signals:hot"
+
+    # Store in Redis for fast access
+    r.zadd(
+        key,
+        {json.dumps(signal): abs(signal["impact"])}
+    )
+
+    # Keep only the top 200 signals
+    r.zremrangebyrank(key, 0, -201)
+
+
+    # -------------------------
+    # PostgreSQL: persistence
+    # -------------------------
+    db_signal = Signal(
+        symbol=signal.get("symbol"),
+        title=signal["title"],
+        source=signal["source"],
+        impact=signal["impact"],
+        confidence=signal["confidence"],
+        timestamp=signal["timestamp"],
+        relevance=processed["relevance"],
+        sentiment_label=sent["label"],
+        sentiment_score=sent["score"],
+        entities=entities,
+    )
+
+    db.add(db_signal)
+    db.commit()
+
+    print("Stored signal:", signal)
