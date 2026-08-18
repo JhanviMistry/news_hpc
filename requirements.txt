@@ -10,3 +10,9 @@ spacy
 pydantic
 python-socketio
 lxml
+streamlit
+
+sqlalchemy==2.0.35
+psycopg[binary]
+alembic==1.13.3
+python-dotenv==1.0.1
