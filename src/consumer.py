@@ -6,16 +6,17 @@ from kafka import KafkaConsumer
 import redis
 
 from model_utils import extract_entities, analyze_sentiment
-from src.database.connection import SessionLocal
-from src.database.models import Signal
+from database.connection import SessionLocal
+from database.models import Signal
 
 KAFKA_BOOTSTRAP = "localhost:9093"
 TOPIC = "news.raw.en"
 REDIS_URL = "redis://localhost:6379/0"
 
 consumer = KafkaConsumer(TOPIC, bootstrap_servers=KAFKA_BOOTSTRAP,
+                         group_id="news-signal-processors",
                          value_deserializer=lambda m: json.loads(m.decode('utf-8')),
-                         auto_offset_reset='earliest', enable_auto_commit=True)
+                         auto_offset_reset='earliest', enable_auto_commit=False)
 
 r = redis.Redis.from_url(REDIS_URL)
 db = SessionLocal()
@@ -96,3 +97,5 @@ for msg in consumer:
     db.commit()
 
     print("Stored signal:", signal)
+
+    consumer.commit()
