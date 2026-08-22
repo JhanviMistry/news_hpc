@@ -13,6 +13,8 @@ KAFKA_BOOTSTRAP = "localhost:9093"
 TOPIC = "news.raw.en"
 REDIS_URL = "redis://localhost:6379/0"
 
+MAX_RETRIES = 3
+
 consumer = KafkaConsumer(TOPIC, bootstrap_servers=KAFKA_BOOTSTRAP,
                          group_id="news-signal-processors",
                          value_deserializer=lambda m: json.loads(m.decode('utf-8')),
@@ -93,9 +95,41 @@ for msg in consumer:
         entities=entities,
     )
 
+    '''
     db.add(db_signal)
     db.commit()
 
     print("Stored signal:", signal)
 
     consumer.commit()
+    '''
+
+    success = False
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            db.add(db_signal)
+            db.commit()
+
+            success = True
+
+            print(
+                f"Stored signal successfully "
+                f"(attempt {attempt}):",
+                signal
+            )
+
+            break
+
+        except Exception as e:
+            db.rollback()
+
+            print(
+                f"Database write failed "
+                f"(attempt {attempt}/{MAX_RETRIES}): {e}"
+            )
+
+            time.sleep(2)
+
+    if success:
+        consumer.commit()
