@@ -4,6 +4,7 @@ import time
 import hashlib
 
 from kafka import KafkaConsumer
+from kafka import KafkaProducer
 import redis
 
 from sqlalchemy.exc import IntegrityError
@@ -14,6 +15,7 @@ from database.models import Signal
 
 KAFKA_BOOTSTRAP = "localhost:9093"
 TOPIC = "news.raw.en"
+DLQ_TOPIC = "news.raw.en.dlq"
 REDIS_URL = "redis://localhost:6379/0"
 
 MAX_RETRIES = 3
@@ -22,6 +24,13 @@ consumer = KafkaConsumer(TOPIC, bootstrap_servers=KAFKA_BOOTSTRAP,
                          group_id="news-signal-processors",
                          value_deserializer=lambda m: json.loads(m.decode('utf-8')),
                          auto_offset_reset='earliest', enable_auto_commit=False)
+
+# producer inside the consumer cause
+# consumer itself is responsible for forwarding failed messages
+dlq_producer = KafkaProducer(
+    bootstrap_servers=KAFKA_BOOTSTRAP,
+    value_serializer=lambda v: json.dumps(v).encode("utf-8")
+)
 
 r = redis.Redis.from_url(REDIS_URL)
 db = SessionLocal()
@@ -54,6 +63,18 @@ def generate_signal(processed):
         "source": processed["source"],
         "title": processed["title"]
     }
+
+def send_to_dlq(item, error):
+    payload = {
+        "original_message": item,
+        "error": str(error),
+        "failed_at": time.time(),
+    }
+
+    dlq_producer.send(DLQ_TOPIC, payload)
+    dlq_producer.flush()
+
+    print("Sent message to DLQ.")
 
 for msg in consumer:
     item = msg.value
@@ -118,6 +139,7 @@ for msg in consumer:
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
+            raise RuntimeError("Testing DLQ")
             db.add(db_signal)
             db.commit()
 
@@ -150,4 +172,7 @@ for msg in consumer:
             time.sleep(2)
 
     if success:
+        consumer.commit()
+    else:
+        send_to_dlq(item, "Max retries exceeded")
         consumer.commit()
