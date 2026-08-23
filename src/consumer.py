@@ -1,9 +1,12 @@
 # consumer.py
 import json
 import time
+import hashlib
 
 from kafka import KafkaConsumer
 import redis
+
+from sqlalchemy.exc import IntegrityError
 
 from model_utils import extract_entities, analyze_sentiment
 from database.connection import SessionLocal
@@ -32,6 +35,12 @@ def market_relevance(item):
         if kw in txt:
             score += 0.2
     return min(score, 1.0)
+
+# helper function to generate event id
+# Idempotency - Every identical article gets the same hash
+def generate_event_id(item):
+    key = f"{item.get('source', '')}|{item.get('link', '')}"
+    return hashlib.sha256(key.encode()).hexdigest()
 
 def generate_signal(processed):
     # combine sentiment score and relevance into a numeric expected move
@@ -83,6 +92,7 @@ for msg in consumer:
     # PostgreSQL: persistence
     # -------------------------
     db_signal = Signal(
+        event_id=generate_event_id(item),
         symbol=signal.get("symbol"),
         title=signal["title"],
         source=signal["source"],
@@ -119,6 +129,14 @@ for msg in consumer:
                 signal
             )
 
+            break
+
+        except IntegrityError:
+            db.rollback()
+
+            print("Duplicate article detected. Skipping.")
+
+            success = True
             break
 
         except Exception as e:

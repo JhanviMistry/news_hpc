@@ -8,6 +8,8 @@ class Signal(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
+    event_id = Column(String(64), unique=True, nullable=False, index=True)
+
     symbol = Column(String(20), nullable=True)
 
     title = Column(String, nullable=False)
