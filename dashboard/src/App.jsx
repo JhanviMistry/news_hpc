@@ -1,4 +1,8 @@
+import { useEffect, useState } from "react";
 import "./App.css";
+import { getTopSignals } from "./api";
+
+{/*import "./App.css";*/}
 
 function App() {
   return (

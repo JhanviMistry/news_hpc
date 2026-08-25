@@ -8,7 +8,6 @@ from bs4 import BeautifulSoup
 KAFKA_BOOTSTRAP = "localhost:9093"
 TOPIC = "news.raw.en"
 
-
 producer = KafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP,
                          value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
