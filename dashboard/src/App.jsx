@@ -5,6 +5,28 @@ import { getTopSignals } from "./api";
 {/*import "./App.css";*/}
 
 function App() {
+  const [signals, setSignals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function loadSignals() {
+      try {
+        const data = await getTopSignals(10);
+  
+        setSignals(data.signals);
+        setError(null);
+      } catch (err) {
+        console.error(err);
+        setError("Unable to connect to NewsPulse API");
+      } finally {
+        setLoading(false);
+      }
+    }
+  
+    loadSignals();
+  }, []);
+
   return (
     <div className="app">
 
@@ -114,84 +136,90 @@ function App() {
             </div>
 
             <div className="signal-list">
-
-              <div className="signal-row">
-                <div className="signal-symbol positive-bg">
-                  A
+              {loading && (
+                <div className="activity-placeholder">
+                  Loading signals...
                 </div>
+              )}
 
-                <div className="signal-info">
-                  <strong>AAPL</strong>
-                  <span>Positive market sentiment</span>
+              {error && (
+                <div className="activity-placeholder">
+                  {error}
                 </div>
+              )}
 
-                <div className="signal-impact positive">
-                  +0.82
+              {!loading && !error && signals.length === 0 && (
+                <div className="activity-placeholder">
+                  No signals available.
                 </div>
+              )}
 
-                <span className="badge high">
-                  HIGH
-                </span>
-              </div>
+              {!loading &&
+                !error &&
+                signals.map((item, index) => {
+                  const signal = item.signal;
 
-              <div className="signal-row">
-                <div className="signal-symbol negative-bg">
-                  N
-                </div>
+                  const impact = Number(signal.impact || 0);
 
-                <div className="signal-info">
-                  <strong>NVDA</strong>
-                  <span>Negative market sentiment</span>
-                </div>
+                  const positive = impact >= 0;
 
-                <div className="signal-impact negative">
-                  -0.71
-                </div>
+                  const magnitude = Math.abs(impact);
 
-                <span className="badge high">
-                  HIGH
-                </span>
-              </div>
+                  let severity = "LOW";
 
-              <div className="signal-row">
-                <div className="signal-symbol positive-bg">
-                  M
-                </div>
+                  if (magnitude >= 0.7) {
+                    severity = "HIGH";
+                  } else if (magnitude >= 0.4) {
+                    severity = "MEDIUM";
+                  }
 
-                <div className="signal-info">
-                  <strong>MSFT</strong>
-                  <span>Positive market sentiment</span>
-                </div>
+                  return (
+                    <div
+                      className="signal-row"
+                      key={`${signal.timestamp}-${index}`}
+                    >
+                      <div
+                        className={`signal-symbol ${
+                          positive ? "positive-bg" : "negative-bg"
+                        }`}
+                      >
+                        {(signal.symbol || "?").charAt(0)}
+                      </div>
 
-                <div className="signal-impact positive">
-                  +0.63
-                </div>
+                      <div className="signal-info">
+                        <strong>
+                          {signal.symbol || "Unknown"}
+                        </strong>
 
-                <span className="badge medium">
-                  MEDIUM
-                </span>
-              </div>
+                        <span>
+                          {signal.title || "No title available"}
+                        </span>
+                      </div>
 
-              <div className="signal-row">
-                <div className="signal-symbol negative-bg">
-                  T
-                </div>
+                      <div
+                        className={`signal-impact ${
+                          positive ? "positive" : "negative"
+                        }`}
+                      >
+                        {positive ? "+" : ""}
+                        {impact.toFixed(2)}
+                      </div>
 
-                <div className="signal-info">
-                  <strong>TSLA</strong>
-                  <span>Negative market sentiment</span>
-                </div>
-
-                <div className="signal-impact negative">
-                  -0.55
-                </div>
-
-                <span className="badge medium">
-                  MEDIUM
-                </span>
-              </div>
+                      <span
+                        className={`badge ${
+                          severity === "HIGH"
+                            ? "high"
+                            : "medium"
+                        }`}
+                      >
+                        {severity}
+                      </span>
+                    </div>
+                  );
+                })}
 
             </div>
+            
           </div>
 
           {/* System Overview */}
