@@ -2,6 +2,7 @@
 import json
 import time
 import hashlib
+from signal_engine import detect_event
 
 from kafka import KafkaConsumer
 from kafka import KafkaProducer
@@ -51,12 +52,13 @@ def generate_event_id(item):
     key = f"{item.get('source', '')}|{item.get('link', '')}"
     return hashlib.sha256(key.encode()).hexdigest()
 
-def generate_signal(processed):
-    # combine sentiment score and relevance into a numeric expected move
+def generate_signal(processed, event_id):
     impact = processed["sentiment"]["score"] * processed["relevance"]
-    # signal object
+
     return {
-        "symbol": processed.get("symbol"),  # in real world: map entities -> tickers
+        "event_id": event_id,
+        "symbol": processed.get("symbol"),
+        "event_type": processed.get("event_type"),
         "impact": impact,
         "confidence": abs(processed["sentiment"]["raw_score"]) * processed["relevance"],
         "timestamp": time.time(),
@@ -82,9 +84,32 @@ for msg in consumer:
     entities = extract_entities(text)
     sent = analyze_sentiment(text)
     rel = market_relevance(item)
-    processed = {"title": item.get("title"), "description": item.get("description"),
-                 "entities": entities, "sentiment": sent, "relevance": rel, "source": item.get("source")}
-    signal = generate_signal(processed)
+
+    symbol = None
+
+    for entity in entities:
+        if entity.get("ticker"):
+            symbol = entity["ticker"]
+            break
+
+    event_type = detect_event(text)
+
+    processed = {
+        "title": item.get("title"),
+        "description": item.get("description"),
+        "entities": entities,
+        "symbol": symbol,
+        "event_type": event_type,
+        "sentiment": sent,
+        "relevance": rel,
+        "source": item.get("source")
+    }
+    event_id = generate_event_id(item)
+
+    signal = generate_signal(
+        processed,
+        event_id
+    )
     # store top signals in Redis sorted set by absolute impact
     '''
     key = "signals:hot"
@@ -99,14 +124,27 @@ for msg in consumer:
     # -------------------------
     key = "signals:hot"
 
-    # Store in Redis for fast access
+    hot_key = "signals:hot"
+    data_key = "signals:data"
+
     r.zadd(
-        key,
-        {json.dumps(signal): abs(signal["impact"])}
+        hot_key,
+        {
+            signal["event_id"]: abs(signal["impact"])
+        }
     )
 
-    # Keep only the top 200 signals
-    r.zremrangebyrank(key, 0, -201)
+    r.hset(
+        data_key,
+        signal["event_id"],
+        json.dumps(signal)
+    )
+
+    r.zremrangebyrank(
+        hot_key,
+        0,
+        -201
+    )
 
 
     # -------------------------
@@ -139,7 +177,7 @@ for msg in consumer:
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            raise RuntimeError("Testing DLQ")
+            #raise RuntimeError("Testing DLQ")
             db.add(db_signal)
             db.commit()
 

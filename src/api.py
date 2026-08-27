@@ -2,24 +2,61 @@
 import json
 import redis
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 from database.connection import SessionLocal
 from database.models import Signal
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 r = redis.Redis(host="localhost", port=6379, db=0)
 db = SessionLocal()
 
 @app.get("/signals/top")
 def top_signals(n: int = 10):
-    key = "signals:hot"
-    # get highest scores (reverse)
-    items = r.zrevrange(key, 0, n-1, withscores=True)
+    hot_key = "signals:hot"
+    data_key = "signals:data"
+
+    event_ids = r.zrevrange(
+        hot_key,
+        0,
+        n - 1,
+        withscores=True
+    )
+
     results = []
-    for bs, score in items:
-        results.append({"signal": json.loads(bs), "score": score})
-    return {"count": len(results), "signals": results}
+
+    for event_id, score in event_ids:
+        signal_json = r.hget(
+            data_key,
+            event_id
+        )
+
+        if signal_json is None:
+            continue
+
+        signal = json.loads(signal_json)
+
+        results.append({
+            "signal": signal,
+            "score": score
+        })
+
+    return {
+        "count": len(results),
+        "signals": results
+    }
 
 @app.get("/signals/history")
 def signal_history(limit: int = 20):
