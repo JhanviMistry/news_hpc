@@ -59,6 +59,17 @@ EVENT_PATTERNS = {
     ],
 }
 
+EVENT_WEIGHTS = {
+    "merger_acquisition": 1.5,
+    "earnings": 1.3,
+    "regulatory": 1.4,
+    "leadership": 1.2,
+    "macro": 1.3,
+    "ipo": 1.4,
+    "product": 1.1,
+    "general": 0.7,
+}
+
 
 def detect_event(text):
     """
@@ -79,3 +90,20 @@ def detect_event(text):
         return "general"
 
     return detected[0]
+
+def calculate_impact(sentiment_score, relevance, event_type):
+    """
+    Calculate market impact using sentiment, relevance,
+    and the type of financial event.
+    """
+
+    event_weight = EVENT_WEIGHTS.get(event_type, 0.7)
+
+    impact = (
+        sentiment_score
+        * relevance
+        * event_weight
+    )
+
+    # Keep impact within -1 to +1
+    return max(-1.0, min(1.0, impact))

@@ -2,7 +2,7 @@
 import json
 import time
 import hashlib
-from signal_engine import detect_event
+from signal_engine import detect_event, calculate_impact
 
 from kafka import KafkaConsumer
 from kafka import KafkaProducer
@@ -53,7 +53,11 @@ def generate_event_id(item):
     return hashlib.sha256(key.encode()).hexdigest()
 
 def generate_signal(processed, event_id):
-    impact = processed["sentiment"]["score"] * processed["relevance"]
+    impact = calculate_impact(
+    processed["sentiment"]["score"],
+    processed["relevance"],
+    processed["event_type"]
+)
 
     return {
         "event_id": event_id,
