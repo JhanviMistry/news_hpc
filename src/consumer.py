@@ -2,7 +2,7 @@
 import json
 import time
 import hashlib
-from signal_engine import detect_event, calculate_impact
+from signal_engine import detect_event, calculate_impact, calculate_confidence
 
 from kafka import KafkaConsumer
 from kafka import KafkaProducer
@@ -57,14 +57,22 @@ def generate_signal(processed, event_id):
     processed["sentiment"]["score"],
     processed["relevance"],
     processed["event_type"]
-)
+    )
+
+    confidence = calculate_confidence(
+        processed["sentiment"]["raw_score"],
+        processed["relevance"],
+        processed["event_type"],
+        processed["entities"]
+    )
 
     return {
         "event_id": event_id,
         "symbol": processed.get("symbol"),
         "event_type": processed.get("event_type"),
         "impact": impact,
-        "confidence": abs(processed["sentiment"]["raw_score"]) * processed["relevance"],
+        #"confidence": abs(processed["sentiment"]["raw_score"]) * processed["relevance"],
+        "confidence": confidence,
         "timestamp": time.time(),
         "source": processed["source"],
         "title": processed["title"]

@@ -70,6 +70,40 @@ EVENT_WEIGHTS = {
     "general": 0.7,
 }
 
+def calculate_confidence(
+    sentiment_raw_score,
+    relevance,
+    event_type,
+    entities
+):
+    """
+    Calculate confidence based on:
+    - sentiment model confidence
+    - market relevance
+    - event classification
+    - presence of recognised entities
+    """
+
+    # 1. Sentiment confidence
+    sentiment_confidence = float(sentiment_raw_score)
+
+    # 2. Market relevance
+    relevance_score = float(relevance)
+
+    # 3. Event confidence
+    event_confidence = 0.5 if event_type != "general" else 0.25
+
+    # 4. Entity confidence
+    entity_confidence = 0.2 if entities else 0.0
+
+    confidence = (
+        0.40 * sentiment_confidence
+        + 0.30 * relevance_score
+        + 0.20 * event_confidence
+        + 0.10 * entity_confidence
+    )
+
+    return round(min(confidence, 1.0), 4)
 
 def detect_event(text):
     """
