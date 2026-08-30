@@ -105,6 +105,18 @@ def calculate_confidence(
 
     return round(min(confidence, 1.0), 4)
 
+def confidence_level(confidence):
+    """
+    Convert numeric confidence into a human-readable level.
+    """
+
+    if confidence >= 0.75:
+        return "HIGH"
+    elif confidence >= 0.50:
+        return "MEDIUM"
+    else:
+        return "LOW"
+
 def detect_event(text):
     """
     Detect the most relevant financial event in an article.

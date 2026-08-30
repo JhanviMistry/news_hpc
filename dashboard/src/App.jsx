@@ -163,7 +163,7 @@ function App() {
 
                   const positive = impact >= 0;
 
-                  const magnitude = Math.abs(impact);
+                {/*  const magnitude = Math.abs(impact);
 
                   let severity = "LOW";
 
@@ -172,6 +172,9 @@ function App() {
                   } else if (magnitude >= 0.4) {
                     severity = "MEDIUM";
                   }
+                  */}
+
+                  const severity = signal.confidence_level || "LOW";
 
                   return (
                     <div
