@@ -29,3 +29,7 @@ class Signal(Base):
     sentiment_score = Column(Float, nullable=True)
 
     entities = Column(JSON, nullable=True)
+
+    event_type = Column(String(50), nullable=True)
+
+    confidence_level = Column(String(20), nullable=True)
