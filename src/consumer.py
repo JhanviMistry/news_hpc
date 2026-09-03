@@ -177,6 +177,8 @@ for msg in consumer:
         sentiment_label=sent["label"],
         sentiment_score=sent["score"],
         entities=entities,
+        event_type=signal.get("event_type"),
+        confidence_level=signal.get("confidence_level"),
     )
 
     '''
