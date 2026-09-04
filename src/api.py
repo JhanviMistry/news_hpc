@@ -59,24 +59,33 @@ def top_signals(n: int = 10):
     }
 
 @app.get("/signals/history")
-def signal_history(limit: int = 20):
+def signal_history(limit: int = 20, offset: int = 0):
     rows = (
         db.query(Signal)
         .order_by(Signal.timestamp.desc())
+        .offset(offset)
         .limit(limit)
         .all()
     )
 
+    total = db.query(Signal).count()
+
     return {
         "count": len(rows),
+        "total": total,
+        "limit": limit,
+        "offset": offset,
         "signals": [
             {
                 "id": signal.id,
+                "event_id": signal.event_id,
                 "symbol": signal.symbol,
                 "title": signal.title,
                 "source": signal.source,
                 "impact": signal.impact,
                 "confidence": signal.confidence,
+                "confidence_level": signal.confidence_level,
+                "event_type": signal.event_type,
                 "timestamp": signal.timestamp,
                 "relevance": signal.relevance,
                 "sentiment_label": signal.sentiment_label,
@@ -102,11 +111,14 @@ def get_signal(signal_id: int):
 
     return {
         "id": signal.id,
+        "event_id": signal.event_id,
         "symbol": signal.symbol,
         "title": signal.title,
         "source": signal.source,
         "impact": signal.impact,
         "confidence": signal.confidence,
+        "confidence_level": signal.confidence_level,
+        "event_type": signal.event_type,
         "timestamp": signal.timestamp,
         "relevance": signal.relevance,
         "sentiment_label": signal.sentiment_label,
